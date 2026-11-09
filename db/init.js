@@ -1,0 +1,112 @@
+const initSql = `
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'cashier',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  price REAL NOT NULL,
+  stock INTEGER NOT NULL DEFAULT 0,
+  low_stock_alert INTEGER NOT NULL DEFAULT 5,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  receipt_no TEXT NOT NULL,
+  cashier_id INTEGER NOT NULL,
+  cashier_name TEXT NOT NULL,
+  payment_method TEXT NOT NULL,
+  amount_paid REAL NOT NULL,
+  total REAL NOT NULL,
+  change_given REAL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS sale_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  product_name TEXT NOT NULL,
+  price REAL NOT NULL,
+  quantity INTEGER NOT NULL,
+  subtotal REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  visits INTEGER DEFAULT 0,
+  total_spent REAL DEFAULT 0,
+  loyalty_points INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS suppliers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  items_supplied TEXT,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS expenses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL,
+  amount REAL NOT NULL,
+  date TEXT NOT NULL,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS tables (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  number INTEGER NOT NULL UNIQUE,
+  capacity INTEGER NOT NULL DEFAULT 4,
+  status TEXT NOT NULL DEFAULT 'free',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  table_number INTEGER,
+  customer_name TEXT,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  total REAL DEFAULT 0,
+  item_count INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS mpesa_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  receipt_no TEXT NOT NULL,
+  checkout_request_id TEXT UNIQUE,
+  merchant_request_id TEXT,
+  phone TEXT NOT NULL,
+  amount REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  mpesa_receipt TEXT,
+  result_desc TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS void_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_id INTEGER NOT NULL,
+  receipt_no TEXT NOT NULL,
+  requested_by INTEGER NOT NULL,
+  requested_by_name TEXT NOT NULL,
+  reason TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reviewed_by INTEGER,
+  reviewed_by_name TEXT,
+  review_note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at DATETIME
+);
+`;
+module.exports = initSql;

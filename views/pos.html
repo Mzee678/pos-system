@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NEXA POS – Cashier</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0b1320;--sidebar:#0f1c2e;--border:#1c2d42;--text:#e2eaf4;--muted:#5a7a9a;--accent:#e05a2b;--green:#22c55e;--red:#ef4444}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--sidebar);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.brand h1{font-size:1.3rem;font-weight:900;color:#fff;letter-spacing:3px}
+.brand h1 span{color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.cashier-pill{background:#1a2535;border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#8899aa}
+.cashier-pill b{color:var(--text)}
+.time-disp{font-size:0.75rem;color:var(--muted);font-family:monospace}
+.topbar-btn{padding:6px 13px;border-radius:7px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:#1a2535;color:var(--muted);transition:all 0.2s}
+.topbar-btn:hover{color:#fff;border-color:var(--accent)}
+.pos-body{display:flex;flex:1;overflow:hidden}
+.catalog-side{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.search-bar{padding:10px 14px;background:var(--sidebar);border-bottom:1px solid var(--border);flex-shrink:0}
+.search-inner{position:relative}
+.search-inner input{width:100%;background:#1a2535;border:1.5px solid var(--border);border-radius:9px;padding:9px 14px 9px 36px;color:#fff;font-size:0.87rem;outline:none;transition:border-color 0.2s}
+.search-inner input:focus{border-color:var(--accent)}
+.search-inner::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:0.75rem;pointer-events:none}
+.product-grid{flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;align-content:start}
+.product-grid::-webkit-scrollbar{width:4px}
+.product-grid::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.tile{border-radius:12px;padding:14px 12px;cursor:pointer;transition:all 0.15s;user-select:none;min-height:88px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 3px 10px rgba(0,0,0,0.3);position:relative}
+.tile:hover{transform:translateY(-2px);filter:brightness(1.12)}
+.tile:active{transform:scale(0.97)}
+.tile.out{opacity:0.35;pointer-events:none}
+.tile-name{font-size:0.87rem;font-weight:700;color:#fff;line-height:1.25}
+.tile-price{font-size:1rem;font-weight:800;color:rgba(255,255,255,0.92);margin-top:8px}
+.tile-stock{position:absolute;top:7px;right:7px;background:rgba(0,0,0,0.3);border-radius:9px;padding:2px 6px;font-size:0.62rem;color:rgba(255,255,255,0.8)}
+.empty-grid{grid-column:1/-1;text-align:center;padding:60px 20px;color:#334455}
+.cat-nav{background:var(--sidebar);border-top:1px solid var(--border);padding:0 10px;height:62px;display:flex;align-items:center;gap:6px;overflow-x:auto;flex-shrink:0}
+.cat-nav::-webkit-scrollbar{height:3px}
+.cat-nav::-webkit-scrollbar-thumb{background:var(--border)}
+.cat-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 14px;border-radius:9px;cursor:pointer;border:1.5px solid transparent;transition:all 0.18s;min-width:66px;white-space:nowrap;flex-shrink:0}
+.cat-tab .ci{font-size:1.1rem}
+.cat-tab .cl{font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;transition:color 0.2s}
+.cat-tab.active{background:#1a2535;border-color:var(--accent)}
+.cat-tab.active .cl{color:var(--accent)}
+.cat-tab:hover:not(.active){background:#1a2535}
+.receipt-side{width:340px;flex-shrink:0;display:flex;flex-direction:column;background:var(--sidebar);border-left:1px solid var(--border)}
+.receipt-top{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.receipt-top h3{font-size:0.88rem;font-weight:700;color:#fff}
+.rno{font-size:0.7rem;color:var(--accent);font-family:monospace;background:#1e1a14;padding:2px 7px;border-radius:5px}
+.order-list{flex:1;overflow-y:auto;padding:10px}
+.order-list::-webkit-scrollbar{width:3px}
+.order-list::-webkit-scrollbar-thumb{background:var(--border)}
+.order-empty{text-align:center;padding:40px 16px;color:#334455}
+.order-empty .ei{font-size:2rem;margin-bottom:8px}
+.order-item{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:9px;margin-bottom:5px;background:#111820;border:1px solid var(--border)}
+.oi-bar{width:3px;height:34px;border-radius:3px;flex-shrink:0}
+.oi-info{flex:1;min-width:0}
+.oi-name{font-size:0.82rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oi-unit{font-size:0.7rem;color:var(--muted);margin-top:1px}
+.oi-qty{display:flex;align-items:center;gap:5px}
+.qbtn{width:23px;height:23px;border-radius:5px;border:1px solid var(--border);background:#1a2535;color:#fff;cursor:pointer;font-size:0.88rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
+.qbtn:hover{background:var(--accent);border-color:var(--accent)}
+.qnum{font-size:0.85rem;font-weight:700;color:#fff;min-width:18px;text-align:center}
+.oi-sub{font-size:0.83rem;font-weight:700;color:var(--accent);min-width:54px;text-align:right}
+.rm-btn{background:none;border:none;color:#334455;cursor:pointer;font-size:0.8rem;padding:2px 3px;transition:color 0.15s;flex-shrink:0}
+.rm-btn:hover{color:var(--red)}
+.receipt-totals{padding:11px 16px;border-top:1px solid var(--border)}
+.tot-row{display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);margin-bottom:4px}
+.tot-big{display:flex;justify-content:space-between;font-size:1.1rem;font-weight:800;color:#fff;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
+.tot-big .amt{color:var(--accent)}
+.payment-area{padding:11px 14px;border-top:1px solid var(--border)}
+.pay-label{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px}
+.pay-methods{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:9px}
+.pay-opt{padding:7px 4px;border-radius:7px;border:1.5px solid var(--border);background:#111820;color:var(--muted);font-size:0.72rem;font-weight:700;cursor:pointer;text-align:center;transition:all 0.18s}
+.pay-opt .pi{font-size:1rem;display:block;margin-bottom:2px}
+.pay-opt.active{border-color:var(--accent);color:var(--accent);background:#1e1510}
+.cash-row{margin-bottom:8px}
+.cash-row input{width:100%;background:#111820;border:1.5px solid var(--border);border-radius:7px;padding:8px 12px;color:#fff;font-size:0.88rem;outline:none;transition:border-color 0.2s}
+.cash-row input:focus{border-color:var(--accent)}
+.change-row{background:#0a1e0e;border:1px solid #1a4020;border-radius:7px;padding:8px 13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.change-row span{font-size:0.75rem;color:var(--green)}
+.change-row b{color:var(--green);font-size:0.95rem}
+.charge-btn{width:100%;padding:12px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-size:0.92rem;font-weight:800;cursor:pointer;transition:all 0.2s}
+.charge-btn:hover{background:#f06a3b}
+.charge-btn:disabled{background:#1c2d42;color:#334455;cursor:not-allowed}
+.print-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:999;align-items:center;justify-content:center}
+.print-overlay.show{display:flex}
+.receipt-paper{background:#fff;color:#111;width:288px;padding:18px;border-radius:5px;font-family:'Courier New',monospace}
+.rp-brand{text-align:center;margin-bottom:10px}
+.rp-brand h2{font-size:1.05rem;font-weight:900;letter-spacing:3px}
+.rp-brand p{font-size:0.68rem;color:#555;margin-top:2px}
+.rp-div{border:none;border-top:1px dashed #bbb;margin:8px 0}
+.rp-row{display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px}
+.rp-item{font-size:0.72rem;margin-bottom:3px}
+.rp-item .in{font-weight:700}
+.rp-item .is{display:flex;justify-content:space-between;color:#555;font-size:0.69rem}
+.rp-total{display:flex;justify-content:space-between;font-size:0.88rem;font-weight:900;margin-top:5px;padding-top:5px;border-top:1px solid #999}
+.rp-footer{text-align:center;margin-top:10px;font-size:0.65rem;color:#777}
+.print-actions{display:flex;gap:10px;margin-top:16px}
+.print-actions button{flex:1;padding:10px;border-radius:7px;font-size:0.83rem;font-weight:700;cursor:pointer;border:none}
+.btn-p{background:#1B2A4A;color:#fff}
+.btn-c{background:#1c2d42;color:#8899aa}
+@media print{body>*:not(.print-overlay){display:none!important}.print-overlay{display:flex!important;background:#fff;position:static}.print-actions{display:none}}
+.tc-0{background:linear-gradient(135deg,#e05a2b,#c44820)}
+.tc-1{background:linear-gradient(135deg,#2563eb,#1a4fcc)}
+.tc-2{background:linear-gradient(135deg,#16a34a,#128a3e)}
+.tc-3{background:linear-gradient(135deg,#9333ea,#7a28cc)}
+.tc-4{background:linear-gradient(135deg,#dc2626,#b81e1e)}
+.tc-5{background:linear-gradient(135deg,#0891b2,#0678a0)}
+.tc-6{background:linear-gradient(135deg,#d97706,#c46006)}
+.tc-7{background:linear-gradient(135deg,#be185d,#a01450)}
+.tc-8{background:linear-gradient(135deg,#059669,#047a56)}
+.tc-9{background:linear-gradient(135deg,#7c3aed,#6528d0)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><h1>NEX<span>A</span> <span style="color:#5a7a9a;font-weight:400;font-size:0.88rem">POS</span></h1></div>
+  <div class="topbar-right">
+    <span class="time-disp" id="posTime">–</span>
+    <div class="cashier-pill">Cashier: <b id="cashierName">–</b></div>
+    <a href="/manager" class="topbar-btn" style="text-decoration:none">⚙️ Manager</a>
+    <button class="topbar-btn" onclick="location.href='/logout'">Sign Out</button>
+  </div>
+</div>
+
+<div class="pos-body">
+  <div class="catalog-side">
+    <div class="search-bar">
+      <div class="search-inner"><input type="text" id="searchBox" placeholder="Search menu items..." oninput="filterCatalog()"></div>
+    </div>
+    <div class="product-grid" id="productGrid">
+      <div class="empty-grid"><div>🗂️</div><p style="margin-top:8px;font-size:0.85rem">No products yet.<br>Ask the manager to add items.</p></div>
+    </div>
+    <div class="cat-nav" id="catNav">
+      <div class="cat-tab active" onclick="selectCat('All',this)"><span class="ci">⭐</span><span class="cl">All</span></div>
+    </div>
+  </div>
+
+  <div class="receipt-side">
+    <div class="receipt-top">
+      <h3>🧾 Current Order</h3>
+      <span class="rno" id="receiptNo">–</span>
+    </div>
+    <div class="order-list" id="orderList">
+      <div class="order-empty"><div class="ei">🛒</div><p style="font-size:0.8rem">Tap items from the catalog<br>to add them here</p></div>
+    </div>
+    <div class="receipt-totals">
+      <div class="tot-row"><span>Items</span><span id="itemCount">0</span></div>
+      <div class="tot-row"><span>Subtotal</span><span id="subtotalAmt">KES 0.00</span></div>
+      <div class="tot-big"><span>TOTAL</span><span class="amt" id="totalAmt">KES 0.00</span></div>
+    </div>
+    <div class="payment-area">
+      <div class="pay-label">Payment Method</div>
+      <div class="pay-methods">
+        <div class="pay-opt active" onclick="selectPay('cash',this)"><span class="pi">💵</span>Cash</div>
+        <div class="pay-opt" onclick="selectPay('mpesa',this)"><span class="pi">📱</span>M-Pesa</div>
+        <div class="pay-opt" onclick="selectPay('card',this)"><span class="pi">💳</span>Card</div>
+      </div>
+      <div class="cash-row" id="cashRow">
+        <input type="number" id="cashGiven" placeholder="Amount received (KES)" min="0" step="0.5" oninput="calcChange()">
+      </div>
+      <div class="change-row" id="changeRow" style="display:none">
+        <span>Change due</span><b id="changeAmt">KES 0.00</b>
+      </div>
+      <button class="charge-btn" id="chargeBtn" disabled onclick="processPayment()">Add Items to Charge</button>
+    </div>
+  </div>
+</div>
+
+<div class="print-overlay" id="printOverlay">
+  <div>
+    <div class="receipt-paper" id="receiptPaper"></div>
+    <div class="print-actions">
+      <button class="btn-p" onclick="window.print()">🖨️ Print Receipt</button>
+      <button class="btn-c" onclick="newSale()">New Sale</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let cart=[], allProducts=[], selectedCat='All', payMode='cash';
+let catColorMap={}, colorIndex=0;
+const COLORS=['tc-0','tc-1','tc-2','tc-3','tc-4','tc-5','tc-6','tc-7','tc-8','tc-9'];
+const catIcons={All:'⭐',Drinks:'🥤',Food:'🍽️',Snacks:'🍿',Desserts:'🍰',Breakfast:'🍳',Coffee:'☕',Meals:'🍛',Other:'📦'};
+
+function getCatColor(cat){if(!catColorMap[cat])catColorMap[cat]=COLORS[colorIndex++%COLORS.length];return catColorMap[cat];}
+function tick(){const n=new Date();document.getElementById('posTime').textContent=n.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+tick();setInterval(tick,1000);
+document.getElementById('receiptNo').textContent='RCP-'+Date.now();
+// Get cashier name from session via a ping
+fetch('/api/me').then(r=>r.json()).then(u=>{if(u.name)document.getElementById('cashierName').textContent=u.name;}).catch(()=>{});
+
+async function loadProducts(){
+  allProducts=await fetch('/api/products').then(r=>r.json());
+  buildCatNav();renderGrid();
+}
+function buildCatNav(){
+  const cats=[...new Set(allProducts.map(p=>p.category))];
+  const nav=document.getElementById('catNav');
+  nav.innerHTML=`<div class="cat-tab active" onclick="selectCat('All',this)"><span class="ci">⭐</span><span class="cl">All</span></div>`;
+  cats.forEach(cat=>{getCatColor(cat);nav.innerHTML+=`<div class="cat-tab" onclick="selectCat('${cat}',this)"><span class="ci">${catIcons[cat]||'🗂️'}</span><span class="cl">${cat}</span></div>`;});
+}
+function selectCat(cat,el){selectedCat=cat;document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('searchBox').value='';renderGrid();}
+function filterCatalog(){document.querySelectorAll('.cat-tab').forEach((t,i)=>t.classList.toggle('active',i===0));selectedCat='All';renderGrid();}
+function renderGrid(){
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  const prods=allProducts.filter(p=>(selectedCat==='All'||p.category===selectedCat)&&(!q||p.name.toLowerCase().includes(q)||p.category.toLowerCase().includes(q)));
+  const grid=document.getElementById('productGrid');
+  if(!prods.length){grid.innerHTML='<div class="empty-grid"><div>🔍</div><p style="margin-top:8px;font-size:0.85rem">No items found</p></div>';return;}
+  grid.innerHTML=prods.map(p=>`<div class="tile ${getCatColor(p.category)}${p.stock===0?' out':''}" onclick="addToCart(${p.id})">
+    <div class="tile-name">${p.name}</div>
+    <div class="tile-price">KES ${parseFloat(p.price).toFixed(2)}</div>
+    <div class="tile-stock">${p.stock===0?'Out':p.stock}</div>
+  </div>`).join('');
+}
+function addToCart(id){
+  const p=allProducts.find(x=>x.id===id);if(!p||p.stock===0)return;
+  const ex=cart.find(c=>c.product_id===id);
+  if(ex){if(ex.quantity>=p.stock)return;ex.quantity++;ex.subtotal=ex.quantity*ex.price;}
+  else cart.push({product_id:p.id,product_name:p.name,price:parseFloat(p.price),quantity:1,subtotal:parseFloat(p.price),color:getCatColor(p.category)});
+  renderOrder();
+}
+function changeQty(id,d){
+  const idx=cart.findIndex(c=>c.product_id===id);if(idx===-1)return;
+  cart[idx].quantity+=d;
+  if(cart[idx].quantity<=0)cart.splice(idx,1);else cart[idx].subtotal=cart[idx].quantity*cart[idx].price;
+  renderOrder();
+}
+function removeItem(id){cart=cart.filter(c=>c.product_id!==id);renderOrder();}
+function renderOrder(){
+  const total=cart.reduce((s,c)=>s+c.subtotal,0);
+  const count=cart.reduce((s,c)=>s+c.quantity,0);
+  document.getElementById('itemCount').textContent=count;
+  document.getElementById('subtotalAmt').textContent=`KES ${total.toFixed(2)}`;
+  document.getElementById('totalAmt').textContent=`KES ${total.toFixed(2)}`;
+  const list=document.getElementById('orderList');
+  if(!cart.length){
+    list.innerHTML='<div class="order-empty"><div class="ei">🛒</div><p style="font-size:0.8rem">Tap items from the catalog<br>to add them here</p></div>';
+    document.getElementById('chargeBtn').disabled=true;
+    document.getElementById('chargeBtn').textContent='Add Items to Charge';
+    document.getElementById('changeRow').style.display='none';return;
+  }
+  list.innerHTML=cart.map(item=>`<div class="order-item">
+    <div class="oi-bar" style="background:var(--accent)"></div>
+    <div class="oi-info"><div class="oi-name">${item.product_name}</div><div class="oi-unit">KES ${item.price.toFixed(2)} each</div></div>
+    <div class="oi-qty">
+      <button class="qbtn" onclick="changeQty(${item.product_id},-1)">−</button>
+      <span class="qnum">${item.quantity}</span>
+      <button class="qbtn" onclick="changeQty(${item.product_id},1)">+</button>
+    </div>
+    <div class="oi-sub">KES ${item.subtotal.toFixed(2)}</div>
+    <button class="rm-btn" onclick="removeItem(${item.product_id})">✕</button>
+  </div>`).join('');
+  document.getElementById('chargeBtn').disabled=false;
+  document.getElementById('chargeBtn').textContent=`Charge KES ${total.toFixed(2)}`;
+  calcChange();
+}
+function selectPay(mode,el){payMode=mode;document.querySelectorAll('.pay-opt').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.getElementById('cashRow').style.display=mode==='cash'?'block':'none';calcChange();}
+function calcChange(){
+  if(payMode!=='cash'){document.getElementById('changeRow').style.display='none';return;}
+  const total=cart.reduce((s,c)=>s+c.subtotal,0);
+  const given=parseFloat(document.getElementById('cashGiven').value)||0;
+  const cr=document.getElementById('changeRow');
+  if(given>=total&&given>0){cr.style.display='flex';document.getElementById('changeAmt').textContent=`KES ${(given-total).toFixed(2)}`;}
+  else cr.style.display='none';
+}
+async function processPayment(){
+  if(!cart.length)return;
+  const total=cart.reduce((s,c)=>s+c.subtotal,0);
+  const amtPaid=payMode==='cash'?(parseFloat(document.getElementById('cashGiven').value)||total):total;
+  if(payMode==='cash'&&amtPaid<total){alert('Amount received is less than the total!');return;}
+  const r=await fetch('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:cart,payment_method:payMode,amount_paid:amtPaid,total})});
+  const d=await r.json();
+  if(!d.success){alert('Error recording sale. Try again.');return;}
+  showReceipt(d.receipt_no,total,amtPaid,d.change_given);
+}
+function showReceipt(rno,total,paid,change){
+  const now=new Date();
+  document.getElementById('receiptPaper').innerHTML=`
+    <div class="rp-brand"><h2>NEXA POS</h2><p>Ciara Café · Zimmerman, Nairobi</p></div>
+    <hr class="rp-div">
+    <div class="rp-row"><span>Receipt:</span><span>${rno}</span></div>
+    <div class="rp-row"><span>Date:</span><span>${now.toLocaleDateString('en-KE')}</span></div>
+    <div class="rp-row"><span>Time:</span><span>${now.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="rp-row"><span>Payment:</span><span style="text-transform:capitalize">${payMode}</span></div>
+    <hr class="rp-div">
+    ${cart.map(i=>`<div class="rp-item"><div class="in">${i.product_name}</div><div class="is"><span>x${i.quantity} @ KES ${i.price.toFixed(2)}</span><span>KES ${i.subtotal.toFixed(2)}</span></div></div>`).join('')}
+    <div class="rp-total"><span>TOTAL</span><span>KES ${total.toFixed(2)}</span></div>
+    ${payMode==='cash'?`<div class="rp-row" style="margin-top:5px"><span>Cash:</span><span>KES ${paid.toFixed(2)}</span></div><div class="rp-row"><span>Change:</span><span>KES ${change.toFixed(2)}</span></div>`:''}
+    <hr class="rp-div">
+    <div class="rp-footer"><p>Thank you for visiting!</p><p>Ciara Café 🌟</p></div>`;
+  document.getElementById('printOverlay').classList.add('show');
+}
+function newSale(){
+  cart=[];document.getElementById('receiptNo').textContent='RCP-'+Date.now();
+  document.getElementById('cashGiven').value='';document.getElementById('changeRow').style.display='none';
+  payMode='cash';document.querySelectorAll('.pay-opt').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.getElementById('cashRow').style.display='block';
+  document.getElementById('printOverlay').classList.remove('show');
+  renderOrder();loadProducts();
+}
+loadProducts();
+</script>
+</body>
+</html>
